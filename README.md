@@ -9,6 +9,10 @@ visore con zoom ad alta risoluzione.
 ad alta risoluzione (servizio IIIF del catalogo) e le informazioni vengono lette dal vivo
 dai server di Manifestipolitici.it. Ogni manifesto rimanda alla sua scheda originale.
 
+I filtri **Colori** e **Forma** usano una stima automatica fatta da noi sulle immagini
+(`analisi.js`: numero del manifesto, proporzioni, colori presenti). Non sono dati del catalogo
+e possono sbagliare, per esempio con la carta ingiallita.
+
 ## Diritti
 
 Dalle FAQ del catalogo: la Fondazione Gramsci Emilia-Romagna non detiene il diritto d'autore

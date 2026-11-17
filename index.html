@@ -153,7 +153,12 @@
   </div>
   <!-- filtri su dati nostri (analisi visiva delle immagini): presenti anche nella versione pubblica -->
   <div class="riga" id="filtri-visivi">
-    <span class="ctl">Colori</span>
+    <label class="ctl">Colori
+      <select id="modo-colore" title="presente: il manifesto contiene tutti i colori scelti (almeno il 6% ciascuno) · principale: il colore piu' esteso e' uno di quelli scelti (almeno il 20%)">
+        <option value="presente">presenti</option>
+        <option value="principale">colore principale</option>
+      </select>
+    </label>
     <div class="chips" id="chip-colori"></div>
     <span class="ctl">Forma</span>
     <div class="chips" id="chip-forma"></div>
@@ -266,8 +271,20 @@ if (DATI.length) {
 }
 
 // ---------- filtri visivi (dati nostri: forma e colori stimati dalle immagini) ----------
-const ANALISI = window.ANALISI || {};
+// analisi.js: id -> [rapporto*100, pixel colorati per mille, "tinta:permille ..." dalla piu' estesa]
+const ANALISI = {};
+for (const [id, [r, qc, s]] of Object.entries(window.ANALISI || {})) {
+  if (typeof qc !== 'number') continue;   // formato vecchio: ignoro
+  const q = {};
+  for (const p of (s || '').split(' ').filter(Boolean)) { const [k, v] = p.split(':'); q[k] = +v / 1000; }
+  const top = Object.keys(q)[0];           // la stringa e' gia' ordinata dalla tinta piu' estesa
+  ANALISI[id] = { r: r / 100, qc: qc / 1000, q, top };
+}
 const N_ANALISI = Object.keys(ANALISI).length;
+// soglie (frazione della superficie del manifesto)
+const SOGLIA_PRESENTE = 0.06;    // "presente": il colore copre almeno il 6%
+const SOGLIA_PRINCIPALE = 0.20;  // "principale": e' il colore piu' esteso e copre almeno il 20%
+const SOGLIA_BN = 0.01;          // bianco e nero: meno dell'1% di pixel colorati (solo bianchi, grigi, neri)
 const COLORI = [['rosso', '#d32f2f'], ['arancio', '#f57c00'], ['giallo', '#fbc02d'], ['verde', '#388e3c'],
                 ['blu', '#1e63c4'], ['viola', '#9c3fa8', 'viola/rosa'], ['bn', 'linear-gradient(90deg,#fff 50%,#111 50%)', 'bianco e nero']];
 const FORME = [['verticale', 'verticale'], ['orizzontale', 'orizzontale'], ['quadrato', 'quadrata']];
@@ -279,8 +296,14 @@ if (N_ANALISI) {
     const b = document.createElement('button');
     b.innerHTML = `<i style="background:${sw}"></i>${et || k}`; b.dataset.k = k;
     b.onclick = () => {
-      if (coloriSel.has(k)) coloriSel.delete(k); else coloriSel.add(k);
-      b.classList.toggle('on', coloriSel.has(k)); ricomincia();
+      if (coloriSel.has(k)) coloriSel.delete(k);
+      else {
+        // bianco e nero esclude i colori e viceversa
+        if (k === 'bn') coloriSel.clear(); else coloriSel.delete('bn');
+        coloriSel.add(k);
+      }
+      document.querySelectorAll('#chip-colori button').forEach(x => x.classList.toggle('on', coloriSel.has(x.dataset.k)));
+      ricomincia();
     };
     $('chip-colori').append(b);
   }
@@ -299,14 +322,19 @@ if (N_ANALISI) {
 }
 if (!DATI.length && !N_ANALISI) $('azzera').style.display = 'none';
 
-function forma(a) { const r = a[0] / 100; return r < 0.9 ? 'verticale' : r > 1.1 ? 'orizzontale' : 'quadrato'; }
+function forma(a) { return a.r < 0.9 ? 'verticale' : a.r > 1.1 ? 'orizzontale' : 'quadrato'; }
 function passaVisivo(id) {
   const a = ANALISI[id];
   if (!a) return false;
   if (formaSel && forma(a) !== formaSel) return false;
-  for (const c of coloriSel) {
-    if (c === 'bn' ? a[1] !== 1 : !a[2].split(' ').includes(c)) return false;
+  if (!coloriSel.size) return true;
+  if (coloriSel.has('bn')) return a.qc < SOGLIA_BN;
+  if ($('modo-colore').value === 'principale') {
+    // il colore piu' esteso e' uno di quelli scelti, e copre abbastanza superficie
+    return coloriSel.has(a.top) && a.q[a.top] >= SOGLIA_PRINCIPALE;
   }
+  // "presente": tutti i colori scelti ci sono
+  for (const c of coloriSel) if (!((a.q[c] || 0) >= SOGLIA_PRESENTE)) return false;
   return true;
 }
 
@@ -655,6 +683,7 @@ const rilancia = () => { clearTimeout(timer); timer = setTimeout(ricomincia, 300
   rilancia();
 }));
 ['tipo', 'tecnica', 'colore', 'ordine'].forEach(k => $(k).addEventListener('change', ricomincia));
+$('modo-colore').addEventListener('change', () => { if (coloriSel.size) ricomincia(); });
 function azzera(rifai = true) {
   ['q', 'sogg', 'autore', 'tipo', 'tecnica', 'colore', 'da', 'a'].forEach(k => $(k).value = '');
   document.querySelectorAll('#decenni button').forEach(x => x.classList.remove('on'));
