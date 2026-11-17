@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manifesti politici</title>
+<style>
+  :root {
+    --bg: #151412; --fg: #ece8e1; --muted: #9a948a; --accent: #d8402b;
+    --tile: #23211e; --bar: rgba(21,20,18,.94); --line: #3a3733;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.4 system-ui, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bar);
+           backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 10px 16px; }
+  .riga { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .riga + .riga { margin-top: 8px; }
+  h1 { margin: 0; font-size: 18px; letter-spacing: .02em; }
+  h1 span { color: var(--accent); }
+  .fonte { color: var(--muted); font-size: 12px; max-width: 300px; line-height: 1.3; }
+  .fonte a { color: var(--fg); }
+  .vinfo .nodata a { color: var(--fg); }
+  body { overflow-x: hidden; }
+  @media (max-width: 640px) {
+    .ctl.ctl-dim { display: none; }
+    #griglia { --w: 140px; }
+    .fonte { max-width: none; }
+  }
+  .ctl { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+  select, input, button { background: #2a2825; color: var(--fg); border: 1px solid #47433e;
+         border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 13px; }
+  button { cursor: pointer; }
+  button:hover, select:hover, input:hover { border-color: var(--accent); }
+  input[type=number] { width: 76px; }
+  #q { width: 240px; }
+  #sogg, #autore { width: 190px; }
+  #stato { margin-left: auto; color: var(--muted); font-size: 13px; text-align: right; }
+  #stato b { color: var(--fg); font-weight: 600; }
+  #filtri.spento { opacity: .45; pointer-events: none; }
+  .decenni { display: flex; flex-wrap: wrap; gap: 4px; }
+  .decenni button { padding: 3px 7px; font-size: 12px; }
+  .decenni button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  #griglia { display: grid; gap: 12px; padding: 16px;
+             grid-template-columns: repeat(auto-fill, minmax(var(--w, 170px), 1fr));
+             align-items: start; }
+  .tile { background: var(--tile); border-radius: 4px; overflow: hidden; cursor: zoom-in;
+          position: relative; min-height: 120px; transition: transform .12s; }
+  .tile:hover { transform: scale(1.03); z-index: 1; box-shadow: 0 6px 24px #000a; }
+  .tile img { display: block; width: 100%; height: auto; }
+  .tile .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 7px 5px;
+               font-size: 11.5px; line-height: 1.25; color: #eee;
+               background: linear-gradient(transparent, #000d); opacity: 0; transition: opacity .15s; }
+  .tile:hover .cap { opacity: 1; }
+  #sentinella { height: 1px; }
+  #fine { text-align: center; color: var(--muted); padding: 30px; display: none; }
+
+  /* visore */
+  #visore { position: fixed; inset: 0; z-index: 10; background: rgba(10,10,9,.97);
+            display: none; overflow-y: auto; }
+  #visore.on { display: block; }
+  #visore { scrollbar-gutter: stable; }  /* la barra di scorrimento non cambia la larghezza del visore */
+  .volo { position: fixed; z-index: 20; transform-origin: 0 0; pointer-events: none;
+          box-shadow: 0 10px 50px #000; border-radius: 3px; }
+  .vbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center;
+          padding: 8px 14px; background: rgba(10,10,9,.9); }
+  .vbar .sp { flex: 1; color: var(--muted); font-size: 13px; }
+  .vbar a.btn, .vbar button { text-decoration: none; color: var(--fg); background: #2a2825;
+          border: 1px solid #47433e; border-radius: 6px; padding: 6px 12px; font-size: 13px; }
+  .vbar a.btn:hover, .vbar button:hover { border-color: var(--accent); }
+  .vimg { height: calc(100vh - 110px); display: flex; align-items: center; justify-content: center;
+          padding: 0 64px; position: relative; }
+  .vimg img { width: 100%; height: 100%; object-fit: contain; }
+  #osd { width: 100%; height: 100%; display: none; }
+  #vqual { color: var(--muted); font-size: 12px; }
+  #vpagine { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+  #vpagine img { height: 70px; cursor: pointer; opacity: .6; border: 2px solid transparent; }
+  #vpagine img.on { opacity: 1; border-color: var(--accent); }
+  .vimg .nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 44px;
+               background: none; border: none; color: #fff8; padding: 20px 14px; cursor: pointer; }
+  .vimg .nav:hover { color: #fff; }
+  #prec { left: 0; } #succ { right: 0; }
+  .vinfo { max-width: 860px; margin: 18px auto 60px; padding: 0 20px; }
+  .vinfo h2 { font-size: 22px; line-height: 1.3; margin: 0 0 14px; font-weight: 600; }
+  .vinfo dl { display: grid; grid-template-columns: 170px 1fr; gap: 6px 16px; margin: 0; }
+  .vinfo dt { color: var(--muted); font-size: 13px; padding-top: 2px; }
+  .vinfo dd { margin: 0; white-space: pre-line; }
+  .vinfo dd a { color: var(--fg); text-decoration: underline dotted; cursor: pointer; }
+  .vinfo .nodata { color: var(--muted); }
+  .scorri { text-align: center; color: var(--muted); font-size: 12px; margin-top: 6px; }
+  @media (max-width: 640px) {
+    #griglia { gap: 8px; padding: 8px; }
+    .vimg { padding: 0 34px; height: 70vh; }
+    .vinfo dl { grid-template-columns: 1fr; }
+    #q, #sogg, #autore { width: 100%; }
+  }
+  /* visore: sfondo pieno; su schermo largo immagine a sinistra e informazioni a destra,
+     cosi' non serve scorrere sotto l'immagine (la rotellina sopra l'immagine fa zoom) */
+  #visore { background: #0b0b0a; }
+  @media (min-width: 1000px) {
+    #visore.on { display: grid; grid-template-columns: minmax(0, 1fr) 400px;
+                 grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+    .vbar { grid-column: 1 / -1; }
+    .vimg { grid-column: 1; grid-row: 2; height: auto; min-height: 0; }
+    .vpiede { grid-column: 1; grid-row: 3; padding-bottom: 10px; }
+    .vinfo { grid-column: 2; grid-row: 2 / 4; overflow-y: auto; margin: 0; max-width: none;
+             padding: 4px 22px 30px; border-left: 1px solid var(--line); }
+    .vinfo h2 { font-size: 19px; }
+    .vinfo dl { grid-template-columns: 1fr; gap: 2px; }
+    .vinfo dt { margin-top: 10px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="riga">
+    <h1>Manifesti <span>politici</span></h1>
+    <span class="fonte">immagini e dati da
+      <a href="https://www.manifestipolitici.it/SebinaOpacGramsci/.do" target="_blank" rel="noopener">Manifestipolitici.it</a>,
+      Fondazione Gramsci Emilia-Romagna · pagina non ufficiale</span>
+    <label class="ctl">Ordine
+      <select id="ordine">
+        <option value="asc">dal primo inserito</option>
+        <option value="desc">dall'ultimo inserito</option>
+        <option value="anno">per anno ↑</option>
+        <option value="annod">per anno ↓</option>
+        <option value="rnd">a caso</option>
+      </select>
+    </label>
+    <label class="ctl ctl-dim">Dimensione <input id="dim" type="range" min="110" max="340" value="170"></label>
+    <button id="azzera">Azzera filtri</button>
+    <span id="stato"></span>
+  </div>
+  <div id="filtri">
+    <div class="riga">
+      <input id="q" type="search" placeholder="Cerca in titolo, testo, autori, soggetti…">
+      <input id="sogg" type="search" list="l-sogg" placeholder="Soggetto (es. ABORTO)">
+      <input id="autore" type="search" list="l-aut" placeholder="Committente / autore">
+      <label class="ctl">Tipo <select id="tipo"><option value="">tutti</option></select></label>
+      <label class="ctl">Tecnica <select id="tecnica"><option value="">tutte</option></select></label>
+      <label class="ctl">Colore <select id="colore"><option value="">tutti</option></select></label>
+    </div>
+    <div class="riga">
+      <label class="ctl">Anno dal <input id="da" type="number" placeholder="1900"></label>
+      <label class="ctl">al <input id="a" type="number" placeholder="2026"></label>
+      <div class="decenni" id="decenni"></div>
+    </div>
+  </div>
+  <datalist id="l-sogg"></datalist>
+  <datalist id="l-aut"></datalist>
+</header>
+
+<main id="griglia"></main>
+<div id="sentinella"></div>
+<div id="fine">Fine dei risultati.</div>
+
+<div id="visore" role="dialog" aria-modal="true">
+  <div class="vbar">
+    <span class="sp"><span id="vpos"></span><br><span id="vqual"></span></span>
+    <button id="vscarica" title="Scarica l'immagine alla massima risoluzione disponibile">⬇ Scarica</button>
+    <a class="btn" id="vlink" target="_blank" rel="noopener">Scheda sul sito ↗</a>
+    <button id="chiudi" title="Chiudi (Esc)">✕</button>
+  </div>
+  <div class="vimg">
+    <button class="nav" id="prec" title="Precedente (←)">‹</button>
+    <img id="grande" alt="">
+    <div id="osd"></div>
+    <button class="nav" id="succ" title="Successivo (→)">›</button>
+  </div>
+  <div class="vpiede">
+    <div id="vpagine"></div>
+    <div class="scorri" id="vaiuto"></div>
+  </div>
+  <div class="vinfo" id="vinfo"></div>
+</div>
+
+<!-- indice dei metadati generato da tools/indicizza.py (se manca, la pagina funziona senza filtri) -->
+<script src="manifesti-dati.js"></script>
+<!-- visore a zoom profondo per le immagini IIIF (se non si carica, si usa un'immagine semplice) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+<script>
+const BASE = 'https://www.manifestipolitici.it/SebinaOpacGramsci/';
+const MAX_ID = 19100;
+const BLOCCO = 120;
+const TOT_CATALOGO = 17647;
+
+const $ = id => document.getElementById(id);
+const griglia = $('griglia');
+const cover = (id, size) => `${BASE}cover?idTito=${id}&size=${size}`;
+const scheda = id => `${BASE}resource/GRA${String(id).padStart(8, '0')}`;
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// ---------- dati ----------
+const DATI = Array.isArray(window.MANIFESTI) ? window.MANIFESTI : [];
+const PER_ID = new Map(DATI.map(r => [r.id, r]));
+const AUTORI = ['Committente', 'Disegnatore', 'Autore', 'Fotografo', 'Illustratore', 'Grafico',
+                'Autore principale', 'Altri autori', 'Responsabilità', 'Editori'];
+
+for (const r of DATI) {
+  const c = r.campi || {};
+  r._tipo = (c.Tipo || [])[0] || '';
+  r._tecnica = (c.Tecnica || [])[0] || '';
+  r._colore = (c.Colore || [])[0] || '';
+  r._sogg = c.Soggetti || [];
+  r._aut = Object.keys(c).filter(k => AUTORI.includes(k)).flatMap(k => c[k]);
+  r._txt = norm([r.t, ...Object.values(c).flat()].join(' '));
+  r._soggN = norm(r._sogg.join(' | '));
+  r._autN = norm(r._aut.join(' | '));
+}
+
+function riempiSelect(sel, chiave) {
+  const conta = new Map();
+  for (const r of DATI) if (r[chiave]) conta.set(r[chiave], (conta.get(r[chiave]) || 0) + 1);
+  [...conta].sort((x, y) => y[1] - x[1]).forEach(([v, n]) =>
+    sel.add(new Option(`${v} (${n})`, v)));
+}
+function riempiLista(dl, chiave) {
+  const conta = new Map();
+  for (const r of DATI) for (const v of r[chiave]) {
+    const k = v.split(' - ')[0];     // "ABORTO - Italia - 1981" -> "ABORTO"
+    conta.set(k, (conta.get(k) || 0) + 1);
+  }
+  dl.innerHTML = [...conta].sort((x, y) => y[1] - x[1]).slice(0, 1500)
+    .map(([v, n]) => `<option value="${v.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+}
+
+if (DATI.length) {
+  riempiSelect($('tipo'), '_tipo');
+  riempiSelect($('tecnica'), '_tecnica');
+  riempiSelect($('colore'), '_colore');
+  riempiLista($('l-sogg'), '_sogg');
+  riempiLista($('l-aut'), '_aut');
+  const anni = DATI.filter(r => r.a1).map(r => r.a1);
+  const d0 = Math.floor(Math.min(...anni) / 10) * 10, d1 = Math.floor(Math.max(...anni) / 10) * 10;
+  for (let d = Math.max(d0, 1890); d <= d1; d += 10) {
+    const b = document.createElement('button');
+    b.textContent = d; b.title = `dal ${d} al ${d + 9}`; b.dataset.d = d;
+    b.onclick = () => {
+      const on = b.classList.contains('on');
+      document.querySelectorAll('#decenni button').forEach(x => x.classList.remove('on'));
+      if (on) { $('da').value = ''; $('a').value = ''; }
+      else { b.classList.add('on'); $('da').value = d; $('a').value = d + 9; }
+      ricomincia();
+    };
+    $('decenni').append(b);
+  }
+} else {
+  // versione pubblica senza indice: niente filtri, niente ordine per anno
+  // nascosti, non rimossi: il resto del codice legge comunque i loro valori (vuoti)
+  $('filtri').style.display = 'none';
+  $('azzera').style.display = 'none';
+  document.querySelectorAll('#ordine option[value^="anno"]').forEach(o => o.remove());
+}
+
+// ---------- filtro e ordinamento ----------
+function filtriAttivi() {
+  return ['q', 'sogg', 'autore', 'tipo', 'tecnica', 'colore', 'da', 'a'].some(k => $(k).value.trim());
+}
+
+function costruisciSequenza() {
+  const ordine = $('ordine').value;
+  let ids;
+  if (!filtriAttivi() && !ordine.startsWith('anno')) {
+    // senza filtri mostro tutti gli ID, anche quelli non ancora indicizzati
+    ids = Array.from({ length: MAX_ID }, (_, i) => i + 1);
+  } else {
+    const q = norm($('q').value).split(/\s+/).filter(Boolean);
+    const so = norm($('sogg').value.trim()), au = norm($('autore').value.trim());
+    const tipo = $('tipo').value, tec = $('tecnica').value, col = $('colore').value;
+    const da = parseInt($('da').value, 10), a = parseInt($('a').value, 10);
+    const conAnno = !isNaN(da) || !isNaN(a);
+    let recs = DATI.filter(r =>
+      q.every(w => r._txt.includes(w)) &&
+      (!so || r._soggN.includes(so)) &&
+      (!au || r._autN.includes(au)) &&
+      (!tipo || r._tipo === tipo) && (!tec || r._tecnica === tec) && (!col || r._colore === col) &&
+      (!conAnno || (r.a1 && (isNaN(a) || r.a1 <= a) && (isNaN(da) || r.a2 >= da))));
+    if (ordine === 'anno') recs.sort((x, y) => (x.a1 || 9999) - (y.a1 || 9999) || x.id - y.id);
+    if (ordine === 'annod') recs.sort((x, y) => (y.a1 || 0) - (x.a1 || 0) || x.id - y.id);
+    ids = recs.map(r => r.id);
+  }
+  if (ordine === 'desc') ids.reverse();
+  if (ordine === 'rnd') for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
+let sequenza = [], pos = 0;
+function ricomincia() {
+  sequenza = costruisciSequenza(); pos = 0;
+  griglia.innerHTML = '';
+  $('fine').style.display = 'none';
+  window.scrollTo(0, 0);
+  aggiornaStato();
+  aggiungi();
+}
+
+function aggiornaStato() {
+  const incompleto = DATI.length && DATI.length < TOT_CATALOGO * 0.97;
+  const idx = !DATI.length
+    ? ''
+    : incompleto
+      ? `<span style="color:#e8a33a">⚠ indicizzazione in corso: ${DATI.length.toLocaleString('it')} schede su ~${TOT_CATALOGO.toLocaleString('it')} — i filtri cercano solo tra queste (ricarica la pagina per aggiornare)</span>`
+      : `indice: ${DATI.length.toLocaleString('it')} schede`;
+  const ris = filtriAttivi() || $('ordine').value.startsWith('anno')
+    ? `<b>${sequenza.length.toLocaleString('it')}</b> risultati`
+    : `<b>tutti</b> i manifesti`;
+  $('stato').innerHTML = `${ris}<br>${idx}`;
+}
+
+function didascalia(r) {
+  if (!r) return '';
+  const anno = r.a1 ? (r.a1 === r.a2 ? r.a1 : `${r.a1}–${r.a2}`) : '';
+  return `${r.t || ''}${anno ? ' · ' + anno : ''}`;
+}
+
+function aggiungi() {
+  const frag = document.createDocumentFragment();
+  const fino = Math.min(pos + BLOCCO, sequenza.length);
+  for (; pos < fino; pos++) {
+    const id = sequenza[pos];
+    const t = document.createElement('div');
+    t.className = 'tile'; t.dataset.id = id;
+    const img = new Image();
+    img.loading = 'lazy'; img.decoding = 'async';
+    img.src = cover(id, 'thumb');
+    img.onload = () => { if (img.naturalWidth < 20) t.remove(); };  // segnaposto = nessuna immagine
+    img.onerror = () => t.remove();
+    const cap = document.createElement('div'); cap.className = 'cap';
+    cap.textContent = didascalia(PER_ID.get(id)) || '#' + id;
+    img.alt = cap.textContent;
+    t.append(img, cap);
+    frag.append(t);
+  }
+  griglia.append(frag);
+  if (pos >= sequenza.length) $('fine').style.display = 'block';
+}
+
+new IntersectionObserver(e => {
+  if (e[0].isIntersecting && pos < sequenza.length) aggiungi();
+}, { rootMargin: '1500px' }).observe($('sentinella'));
+
+// ---------- visore ----------
+const visore = $('visore');
+let corrente = null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function apri(tile) {
+  corrente = tile;
+  const id = +tile.dataset.id;
+  const r = PER_ID.get(id);
+  $('grande').alt = r ? r.t : 'Manifesto ' + id;
+  $('vlink').href = scheda(id);
+  const i =[...griglia.children].indexOf(tile) + 1;
+  $('vpos').textContent = `#${id} · ${i} di ${filtriAttivi() ? sequenza.length.toLocaleString('it') : 'tutti'}`;
+
+  let h = '';
+  if (r) {
+    h += `<h2>${esc(r.t)}</h2><dl>`;
+    for (const [k, vals] of Object.entries(r.campi || {})) {
+      const cerca = k === 'Soggetti' ? 'sogg' : AUTORI.includes(k) ? 'autore' : null;
+      const v = vals.map(x => cerca
+        ? `<a data-f="${cerca}" data-v="${esc(cerca === 'sogg' ? x.split(' - ')[0] : x)}" title="filtra">${esc(x)}</a>`
+        : esc(x)).join('\n');
+      h += `<dt>${esc(k)}</dt><dd>${v}</dd>`;
+    }
+    h += '</dl>';
+  } else {
+    h = `<p class="nodata">Carico le informazioni…</p>`;   // arrivano dal manifest IIIF (infoDaManifest)
+  }
+  $('vinfo').innerHTML = h;
+  $('vinfo').scrollTop = 0;
+  visore.scrollTop = 0;
+  const eraChiuso = !visore.classList.contains('on');
+  visore.classList.add('on');
+  document.body.style.overflow = 'hidden';
+  if (eraChiuso) animaApertura(tile);
+  caricaAlta(id, r);
+}
+
+// --- animazioni ---
+const pocoMoto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function animaApertura(tile) {
+  if (pocoMoto) return;
+  visore.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-out' });
+  const img = tile.querySelector('img');
+  if (!img || !img.naturalWidth) return;
+  // la miniatura "vola" dalla griglia al centro del visore
+  const da = img.getBoundingClientRect();
+  const box = document.querySelector('.vimg').getBoundingClientRect();
+  const ar = img.naturalWidth / img.naturalHeight;
+  let w = box.width - 128, h = box.height;
+  if (w / h > ar) w = h * ar; else h = w / ar;
+  const x = box.left + (box.width - w) / 2, y = box.top + (box.height - h) / 2;
+  const c = img.cloneNode();
+  c.className = 'volo';
+  Object.assign(c.style, { left: da.left + 'px', top: da.top + 'px', width: da.width + 'px', height: da.height + 'px' });
+  document.body.append(c);
+  c.animate([
+    { transform: 'none' },
+    { transform: `translate(${x - da.left}px, ${y - da.top}px) scale(${w / da.width}, ${h / da.height})` }
+  ], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' })
+   .onfinish = () => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' })
+                     .onfinish = () => c.remove();
+}
+// --- alta risoluzione dal server IIIF del catalogo (permette l'accesso dal browser) ---
+const IIIF = 'https://manifestipolitici-dl.sebina.it/dl/iiif/v2/';
+const LARGO = matchMedia('(min-width: 1000px)').matches;
+$('vaiuto').textContent = LARGO
+  ? 'rotellina o doppio clic: zoom · trascina per spostarti · ⌂ immagine intera'
+  : 'doppio clic: zoom · ⌂ immagine intera · scorri per le informazioni ↓';
+let pagine = [], pagCorrente = 0, richiesta = 0, osd = null, idAperto = 0, titoloAperto = '', zoomUtente = false;
+
+async function caricaAlta(id, r) {
+  const mia = ++richiesta;
+  idAperto = id; titoloAperto = r ? r.t : '';
+  pagine = []; $('vpagine').innerHTML = '';
+  $('osd').style.display = 'none';
+  const g = $('grande'); g.style.display = 'block'; g.src = cover(id, 'large');  // anteprima subito
+  $('vqual').textContent = 'carico l\'immagine ad alta risoluzione…';
+  try {
+    const m = await (await fetch(`${IIIF}GRA${String(id).padStart(8, '0')}/manifest`)).json();
+    if (mia !== richiesta) return;
+    if (!r) infoDaManifest(id, m);
+    pagine = m.sequences[0].canvases.map(c => {
+      const s = c.images[0].resource.service;
+      const svc = (Array.isArray(s) ? s[0] : s)['@id'];
+      return { svc, w: c.width, h: c.height };
+    });
+    if (!pagine.length) throw new Error('nessuna immagine');
+    if (pagine.length > 1) $('vpagine').innerHTML = pagine.map((p, k) =>
+      `<img src="${p.svc}/full/,120/0/default.jpg" data-k="${k}" title="immagine ${k + 1}">`).join('');
+    mostraPagina(0);
+  } catch (e) {
+    if (mia !== richiesta) return;
+    $('vqual').textContent = 'alta risoluzione non disponibile: anteprima del catalogo';
+    if (!r) $('vinfo').innerHTML = `<p class="nodata">Informazioni non disponibili qui: vedi la
+      <a href="${scheda(id)}" target="_blank" rel="noopener">scheda sul sito</a>.</p>`;
+  }
+}
+
+// informazioni ridotte prese dal manifest IIIF (usate quando la scheda non e' nell'indice locale)
+function infoDaManifest(id, m) {
+  const testo = v => (Array.isArray(v) ? v.map(x => x['@value'] ?? x).join(' / ') : String(v ?? ''));
+  const pulito = s => testo(s).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\*/g, '').trim();
+  const meta = {};
+  for (const x of m.metadata || []) {
+    const l = Array.isArray(x.label) ? (x.label.find(y => y['@language'] === 'it') || x.label[0])['@value'] : x.label;
+    meta[l] = pulito(x.value);
+  }
+  const titolo = meta.Titolo || pulito(m.label);
+  titoloAperto = titolo;
+  $('grande').alt = titolo;
+  const campi = [['Contributi di', 'Autori / committenti'], ['Formato', 'Tipo'], ['Data', 'Anno'],
+                 ['Soggetto', 'Soggetti'], ['Lingua', 'Lingua']];
+  let h = `<h2>${esc(titolo)}</h2><dl>`;
+  if (meta.Descrizione && meta.Descrizione !== titolo) h += `<dt>Descrizione</dt><dd>${esc(meta.Descrizione)}</dd>`;
+  for (const [k, et] of campi) if (meta[k]) h += `<dt>${et}</dt><dd>${esc(meta[k])}</dd>`;
+  h += `</dl><p class="nodata" style="margin-top:18px">Scheda completa (tecnica, editore, misure, note) sul
+        <a href="${scheda(id)}" target="_blank" rel="noopener">sito del catalogo</a>.</p>`;
+  $('vinfo').innerHTML = h;
+}
+
+function mostraPagina(k) {
+  const p = pagine[k]; pagCorrente = k;
+  document.querySelectorAll('#vpagine img').forEach(x => x.classList.toggle('on', +x.dataset.k === k));
+  const qual = `alta risoluzione ${p.w}×${p.h} px` + (pagine.length > 1 ? ` · immagine ${k + 1} di ${pagine.length}` : '');
+  if (window.OpenSeadragon) {
+    $('grande').style.display = 'none';
+    $('osd').style.display = 'block';
+    if (!osd) osd = OpenSeadragon({
+      id: 'osd',
+      prefixUrl: 'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/',
+      // su schermo stretto le info sono sotto: la rotellina deve scorrere, non zoomare
+      gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, scrollToZoom: LARGO },
+      visibilityRatio: 1, maxZoomPixelRatio: 2, crossOriginPolicy: 'Anonymous',
+      showRotationControl: false, showFullPageControl: false,
+    });
+    if (!osd.__agganci) {
+      osd.__agganci = true;
+      // immagine sempre intera all'apertura e quando il riquadro cambia misura (se non hai zoomato tu)
+      osd.addHandler('open', () => { zoomUtente = false; osd.viewport.goHome(true); });
+      osd.addHandler('resize', () => { if (!zoomUtente) osd.viewport.goHome(true); });
+      ['canvas-scroll', 'canvas-double-click', 'canvas-drag', 'canvas-pinch']
+        .forEach(ev => osd.addHandler(ev, () => { zoomUtente = true; }));
+      // clic sullo sfondo attorno all'immagine = chiudi
+      osd.addHandler('canvas-click', e => {
+        if (!e.quick) return;
+        const it = osd.world.getItemAt(0);
+        if (!it) return;
+        const p = osd.viewport.pointFromPixel(e.position), b = it.getBounds();
+        if (p.x < b.x || p.y < b.y || p.x > b.x + b.width || p.y > b.y + b.height) chiudi();
+      });
+    }
+    osd.open(p.svc + '/info.json');
+    // rete di sicurezza: nei primi istanti riporto il visore in cima e l'immagine intera
+    [200, 700, 1500].forEach(ms => setTimeout(() => {
+      if (!visore.classList.contains('on') || zoomUtente) return;
+      visore.scrollTop = 0; visore.scrollLeft = 0;
+      osd.viewport.goHome(true);
+    }, ms));
+  } else {
+    $('grande').src = p.svc + '/full/max/0/default.jpg';
+  }
+  $('vqual').textContent = qual;
+}
+
+$('vpagine').addEventListener('click', e => { const i = e.target.closest('img[data-k]'); if (i) mostraPagina(+i.dataset.k); });
+
+async function scarica() {
+  const p = pagine[pagCorrente];
+  const url = p ? p.svc + '/full/max/0/default.jpg' : cover(idAperto, 'large');
+  const slug = norm(titoloAperto).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  const nome = `manifesto-${idAperto}${slug ? '-' + slug : ''}${pagine.length > 1 ? '-' + (pagCorrente + 1) : ''}.jpg`;
+  const b = $('vscarica'); b.textContent = '⏳ scarico…'; b.disabled = true;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (e) {
+    window.open(url, '_blank');   // ripiego: apre l'immagine, si salva con Ctrl+S
+  } finally { b.textContent = '⬇ Scarica'; b.disabled = false; }
+}
+$('vscarica').onclick = scarica;
+
+function chiudi() {
+  if (!visore.classList.contains('on') || !corrente) return;
+  corrente = null; richiesta++;
+  const fine = () => { visore.classList.remove('on'); document.body.style.overflow = ''; };
+  if (pocoMoto) fine();
+  else visore.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-in' }).onfinish = fine;
+}
+// tasto D nel visore: mostra/nasconde le misure interne (per capire i problemi di visualizzazione)
+function diagnosi() {
+  let d = $('diagnosi');
+  if (d) { d.remove(); return; }
+  const r = el => { const b = el.getBoundingClientRect(); return `${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)}`; };
+  let s = `finestra ${innerWidth}x${innerHeight} dpr=${devicePixelRatio} largo=${LARGO}\n`
+        + `visore scroll ${visore.scrollTop}/${visore.scrollLeft} display=${getComputedStyle(visore).display}\n`
+        + `vimg ${r(document.querySelector('.vimg'))}  osd ${r($('osd'))}  img ${r($('grande'))} (${$('grande').style.display})\n`
+        + `volo=${document.querySelectorAll('.volo').length} focus=${document.activeElement.tagName}.${document.activeElement.className}\n`;
+  if (osd && osd.world.getItemAt(0)) {
+    const b = osd.viewport.getBounds(), i = osd.world.getItemAt(0).getBounds(), c = osd.viewport.getContainerSize();
+    s += `osd contenitore ${Math.round(c.x)}x${Math.round(c.y)} vista ${b.x.toFixed(2)},${b.y.toFixed(2)} ${b.width.toFixed(2)}x${b.height.toFixed(2)} immagine ${i.width.toFixed(2)}x${i.height.toFixed(2)} zoomUtente=${zoomUtente}`;
+  } else s += `osd ${window.OpenSeadragon ? 'pronto ma senza immagine' : 'libreria NON caricata'}`;
+  d = document.createElement('div'); d.id = 'diagnosi'; d.textContent = s;
+  d.style.cssText = 'position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:99;background:#ffeb3b;color:#000;font:12px/1.4 monospace;padding:8px 10px;white-space:pre;border-radius:4px';
+  document.body.append(d);
+}
+// clic sulle zone vuote del visore (fuori dall'immagine, dai pulsanti e dal testo) = chiudi
+visore.addEventListener('click', e => {
+  const t = e.target;
+  if (t === visore || t.id === 'vpagine' || ['vimg', 'vbar', 'sp', 'scorri', 'vinfo', 'vpiede'].some(c => t.classList.contains(c))) chiudi();
+});
+function sposta(dir) {
+  if (!corrente) return;
+  let t = dir > 0 ? corrente.nextElementSibling : corrente.previousElementSibling;
+  if (!t && dir > 0 && pos < sequenza.length) { aggiungi(); t = corrente.nextElementSibling; }
+  if (t) { apri(t); t.scrollIntoView({ block: 'center' }); }
+}
+
+griglia.addEventListener('click', e => { const t = e.target.closest('.tile'); if (t) apri(t); });
+$('chiudi').onclick = chiudi;
+$('prec').onclick = () => sposta(-1);
+$('succ').onclick = () => sposta(1);
+$('vinfo').addEventListener('click', e => {
+  const a = e.target.closest('a[data-f]'); if (!a) return;
+  azzera(false);
+  $(a.dataset.f).value = a.dataset.v;
+  chiudi(); ricomincia();
+});
+document.addEventListener('keydown', e => {
+  if (!visore.classList.contains('on')) return;
+  if (e.key === 'd' || e.key === 'D') diagnosi();
+  if (e.key === 'Escape') chiudi();
+  if (e.key === 'ArrowRight') sposta(1);
+  if (e.key === 'ArrowLeft') sposta(-1);
+});
+
+// ---------- controlli ----------
+let timer;
+const rilancia = () => { clearTimeout(timer); timer = setTimeout(ricomincia, 300); };
+['q', 'sogg', 'autore', 'da', 'a'].forEach(k => $(k).addEventListener('input', () => {
+  if (k === 'da' || k === 'a') document.querySelectorAll('#decenni button').forEach(x => x.classList.remove('on'));
+  rilancia();
+}));
+['tipo', 'tecnica', 'colore', 'ordine'].forEach(k => $(k).addEventListener('change', ricomincia));
+function azzera(rifai = true) {
+  ['q', 'sogg', 'autore', 'tipo', 'tecnica', 'colore', 'da', 'a'].forEach(k => $(k).value = '');
+  document.querySelectorAll('#decenni button').forEach(x => x.classList.remove('on'));
+  if (rifai) ricomincia();
+}
+$('azzera').onclick = () => azzera();
+$('dim').oninput = () => griglia.style.setProperty('--w', $('dim').value + 'px');
+
+ricomincia();
+</script>
+</body>
+</html>
