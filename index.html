@@ -154,7 +154,7 @@
   <!-- filtri su dati nostri (analisi visiva delle immagini): presenti anche nella versione pubblica -->
   <div class="riga" id="filtri-visivi">
     <label class="ctl">Colori
-      <select id="modo-colore" title="presente: il manifesto contiene tutti i colori scelti (almeno il 6% ciascuno) · principale: il colore piu' esteso e' uno di quelli scelti (almeno il 20%)">
+      <select id="modo-colore" title="presenti: il manifesto contiene almeno uno dei colori scelti, anche in piccola parte (6%) · principale: il colore piu' esteso e' uno di quelli scelti (almeno il 20%)">
         <option value="presente">presenti</option>
         <option value="principale">colore principale</option>
       </select>
@@ -333,9 +333,10 @@ function passaVisivo(id) {
     // il colore piu' esteso e' uno di quelli scelti, e copre abbastanza superficie
     return coloriSel.has(a.top) && a.q[a.top] >= SOGLIA_PRINCIPALE;
   }
-  // "presente": tutti i colori scelti ci sono
-  for (const c of coloriSel) if (!((a.q[c] || 0) >= SOGLIA_PRESENTE)) return false;
-  return true;
+  // "presente": almeno uno dei colori scelti c'e' (anche in piccola parte).
+  // Stessa logica "o" di "principale", cosi' "presenti" include sempre tutti i "principale".
+  for (const c of coloriSel) if ((a.q[c] || 0) >= SOGLIA_PRESENTE) return true;
+  return false;
 }
 
 // ---------- filtro e ordinamento ----------
